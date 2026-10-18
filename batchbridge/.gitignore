@@ -1,4 +1,7 @@
 .env
+.en
+.vercel/
+frontend/test-results/
 .venv/
 __pycache__/
 *.py[cod]
@@ -9,4 +12,3 @@ batchbridge.db*
 dist/
 node_modules/
 *.tsbuildinfo
-
