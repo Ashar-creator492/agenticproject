@@ -34,6 +34,7 @@ async def lifespan(_app: FastAPI):
         with SessionLocal() as db:
             seed_demo_data(db)
     with SessionLocal() as db:
+        # Resume work left in-flight by a previous process shutdown.
         interrupted = db.scalars(
             select(AgentRun).where(AgentRun.status.in_(["queued", "running"]))
         ).all()

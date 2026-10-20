@@ -84,6 +84,7 @@ def finalize_trace(decision: TraceDecision, ledger: EvidenceLedger) -> dict:
         raise ValueError("Selected product must come from the MCP catalogue")
     if decision.selected_batch_id and not batch:
         raise ValueError("Selected batch must come from get_batch")
+    # Never accept a lot match without the corresponding product identity.
     if batch and (
         not product
         or batch["product_id"] != product["id"]
@@ -141,6 +142,7 @@ def finalize_escalation(decision: EscalationDecision, ledger: EvidenceLedger) ->
     timeline = ledger.read("get_case_timeline", case_id=ledger.case_id)
     completed = [row for row in findings if row["status"] == "completed"]
     pending = [row for row in findings if row["status"] != "completed"]
+    # Every recorded recipient must provide a human finding before escalation.
     expected = {row["retailer_id"] for row in shipments}
     if not expected or expected - {row["retailer_id"] for row in completed}:
         raise ValueError("All assigned supermarkets must submit human findings first")

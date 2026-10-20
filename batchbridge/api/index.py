@@ -3,10 +3,10 @@ import sys
 from pathlib import Path
 from urllib.parse import parse_qs
 
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
+# Vercel functions can only write temporary local files.
 os.environ.setdefault("DATABASE_URL", "sqlite:////tmp/batchbridge.db")
 os.environ.setdefault("AGENT_MODE", "demo")
 os.environ.setdefault("SEED_DEMO_DATA", "true")
@@ -31,6 +31,7 @@ class VercelPathRewrite:
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
+            # Restore the API path forwarded through the single serverless entry point.
             query = parse_qs(scope.get("query_string", b"").decode())
             forwarded_path = query.get("path", [None])[0]
             if forwarded_path:

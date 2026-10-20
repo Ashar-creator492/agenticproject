@@ -76,6 +76,7 @@ class EvidenceLedger:
         return batches
 
     def validate_call(self, name: str, arguments: dict) -> None:
+        # Tool arguments must be derived from evidence already read for this case.
         for key in ("case_id", "exclude_case_id"):
             if key in arguments and arguments[key] != self.case_id:
                 raise ValueError("Case tools must use the current case ID")

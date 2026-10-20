@@ -22,6 +22,7 @@ def queue_investigation(db, case_id: str, agent_type: str, created_by_user_id: s
             AgentRun.status.in_(["queued", "running", "awaiting_human"]),
         )
     )
+    # Supersede pending work when its evidence snapshot is no longer current.
     if (
         active
         and active.status == "awaiting_human"
@@ -65,6 +66,7 @@ def queue_investigation(db, case_id: str, agent_type: str, created_by_user_id: s
 
 
 async def execute_investigation(run_id: str) -> None:
+    # Claim the queued run before executing work outside the transaction.
     with SessionLocal() as db:
         run = db.get(AgentRun, run_id)
         if not run or run.status != "queued":
@@ -84,6 +86,7 @@ async def execute_investigation(run_id: str) -> None:
             timeout=180,
         )
         proposal_payload = state["proposal"]
+        # Persist a proposal for explicit human review; agents never approve it.
         with SessionLocal() as db:
             run = db.get(AgentRun, run_id)
             latest_version = db.scalar(

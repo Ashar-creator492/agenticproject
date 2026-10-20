@@ -44,6 +44,7 @@ def _revision(db: Session, case_id: str, events: list[str]):
 
 
 def input_snapshot(db: Session, case: Case, stage: str) -> dict:
+    # Approved proposals become stale whenever their supporting facts change.
     snapshot = {
         "version": 1,
         "identity": [case.product_name, case.batch_number, case.retailer_id],
@@ -90,6 +91,7 @@ def shipment_plan_current(db: Session, case: Case, proposal: Proposal) -> bool:
         return False
     if batch.product_id != payload.get("matched_product_id"):
         return False
+    # Require an exact match so outdated recipient lists cannot be approved.
     actual = {
         (row.id, row.retailer_id, row.quantity)
         for row in db.scalars(select(Shipment).where(Shipment.batch_id == batch.id)).all()

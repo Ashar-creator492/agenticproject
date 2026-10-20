@@ -58,6 +58,7 @@ def manufacturer_report_rows(packet: dict[str, Any]) -> Iterable[dict[str, str]]
     product_name = product.get("name") or batch.get("product_name") or ""
     lot = batch.get("batch_number") or ""
 
+    # Flatten each packet section into rows that nontechnical reviewers can scan.
     yield _row("Case", "Case reference", reference=packet.get("case_public_id"))
     yield _row(
         "Product",

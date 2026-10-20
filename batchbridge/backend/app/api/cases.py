@@ -211,6 +211,7 @@ def case_detail(case_id: str, user: User = Depends(current_user), db: Session = 
             for item in agent_runs
         ],
     }
+    # Reporter contact details stay outside agent and manufacturer views.
     if user.role == "importer_investigator":
         result["reporter"] = {"name": case.reporter_name, "email": case.reporter_email}
     return result
