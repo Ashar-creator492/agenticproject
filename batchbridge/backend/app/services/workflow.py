@@ -29,6 +29,7 @@ async def run_selected_agent(state: InvestigationState) -> InvestigationState:
 
 
 def human_gate(state: InvestigationState) -> InvestigationState:
+    # Pause the graph until an authorized reviewer records a decision.
     decision = interrupt(
         {
             "message": f"Human approval is required for the {state['agent_type']} proposal.",
