@@ -34,6 +34,7 @@ class Settings:
 @lru_cache
 def get_settings() -> Settings:
     raw_database_url = os.getenv("DATABASE_URL", "sqlite:///./batchbridge.db")
+    # Normalize hosted PostgreSQL URLs for the psycopg SQLAlchemy driver.
     if raw_database_url.startswith("postgres://"):
         raw_database_url = raw_database_url.replace("postgres://", "postgresql+psycopg://", 1)
     elif raw_database_url.startswith("postgresql://"):
