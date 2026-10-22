@@ -12,6 +12,7 @@ def add_audit(
     actor_user_id: str | None = None,
     details: dict[str, Any] | None = None,
 ) -> None:
+    # The caller commits this event with the workflow change it describes.
     db.add(
         AuditEvent(
             case_id=case_id,
