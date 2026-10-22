@@ -27,6 +27,7 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
         )
+    # Sessions store only a keyed hash of the browser token.
     row = db.execute(
         select(UserSession, User)
         .join(User, User.id == UserSession.user_id)
