@@ -78,6 +78,7 @@ class EvidenceMCPClient:
         name: str,
         arguments: dict,
     ) -> Any:
+        # Enforce each stage's least-privilege tool allowlist locally.
         if name not in AGENT_TOOL_PERMISSIONS.get(agent_type, set()):
             raise PermissionError(f"Agent {agent_type} cannot call MCP tool {name}")
         started = time.monotonic()
