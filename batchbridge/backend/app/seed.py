@@ -98,7 +98,10 @@ def seed_demo_complaints(db: Session) -> int:
             select(User).where(User.role == "retailer_safety_manager")
         ).all()
     }
-    if not organizations or not reviewers:
+    demo_retailers = {row[2] for row in DEMO_COMPLAINTS}
+    if not demo_retailers.issubset(organizations) or not all(
+        organizations[code].id in reviewers for code in demo_retailers
+    ):
         return 0
 
     inserted = 0

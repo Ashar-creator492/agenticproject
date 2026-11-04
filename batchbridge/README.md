@@ -32,6 +32,33 @@ Traceability and escalation always use deterministic rules and read-only MCP rec
 Groq keys or model calls. Restart after environment changes; never put secrets in `.env.example`.
 Triage failures are explicit and never silently switch to rules.
 
+## Use your own records
+
+For a clean local database, choose a new `DATABASE_URL` in ignored `.env` (for example,
+`sqlite:///./escalera-local.db`) and set `SEED_DEMO_DATA=false` **before** running migrations.
+This leaves the existing `batchbridge.db` and its demo cases untouched. Then run:
+
+```bash
+alembic upgrade head
+PYTHONPATH=backend python -m app.bootstrap_importer
+```
+
+The bootstrap command prompts for the first importer organization, investigator email, and
+password. It refuses to create a second importer account. Start the backend and frontend, sign in
+as that importer, and open **Data setup**. Create each manufacturer and retailer with its first
+staff login. Import the **batch CSV first**, then the **shipment CSV**, using the codes shown on
+that page. Templates and row errors are available there. Imported products, lots, and shipments
+are stored in the database and used by the MCP-backed traceability stage.
+
+A retailer can then sign in and use **New report** to select an imported product by SKU, enter its
+manufacturer lot, and start a suspected-issue case. The importer reviews triage and traceability
+before retailer tasks are assigned. Initial staff passwords must be shared privately; the app
+does not send email invitations. The public photo flow still uses a simulated barcode for demo
+verification; use the retailer report flow for your own imported products.
+
+Changing `SEED_DEMO_DATA` does not remove records already in a database. Keep the demo database
+separate from your own-data database.
+
 ## Frontend quick start
 
 ```bash

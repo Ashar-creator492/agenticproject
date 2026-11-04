@@ -289,10 +289,12 @@ textarea { resize: vertical; }
 .side-label { padding: .5rem .65rem; color: #587067; font-size: .58rem; font-weight: 850; letter-spacing: .15em; text-transform: uppercase; }
 .side-label-gap { margin-top: 1rem; }
 .side-item { display: grid; grid-template-columns: 1.25rem 1fr auto; gap: .55rem; align-items: center; border: 1px solid transparent; border-radius: .9rem; padding: .72rem .7rem; color: #50665d; font-size: .74rem; font-weight: 700; }
+.side-navigation button.side-item { width: 100%; background: transparent; text-align: left; cursor: pointer; font-family: inherit; }
 .side-icon { display: grid; width: 1.15rem; height: 1.15rem; place-items: center; color: #5d776b; }
 .side-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .side-item i { display: grid; min-width: 1.3rem; height: 1.3rem; place-items: center; border-radius: 999px; background: rgba(31,91,70,.1); font-size: .58rem; font-style: normal; }
 .side-item.active { border-color: rgba(255,255,255,.62); background: linear-gradient(135deg, rgba(255,255,255,.68), rgba(194,234,210,.68)); color: var(--ink); box-shadow: 0 10px 24px rgba(30,80,59,.08), inset 0 1px 0 rgba(255,255,255,.82); }
+.side-navigation button.side-item.active { background: linear-gradient(135deg, rgba(255,255,255,.68), rgba(194,234,210,.68)); }
 .side-item.active .side-icon { color: var(--emerald); }
 .sidebar-account { position: relative; margin-top: auto; }
 .sidebar-user { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: .55rem; align-items: center; border-top: 1px solid #c2d9cc; padding: .9rem .35rem 0; }
@@ -381,7 +383,16 @@ textarea { resize: vertical; }
 .approval-panel { border-left: 3px solid var(--emerald); }
 .compact-panel { display: flex; gap: 1rem; align-items: center; justify-content: space-between; background: rgba(255,255,255,.54); }
 .compact-panel h2 { font-size: 1.15rem; }
-.import-grid { display: flex; gap: .45rem; }
+.import-grid { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
+.import-grid a { color: var(--forest); font-size: .75rem; font-weight: 750; }
+.import-errors { color: #8e3328; font-size: .75rem; }
+.data-setup { max-width: 1050px; margin: 0 auto; }
+.data-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; margin: 1rem 0; }
+.data-form .button { align-self: end; }
+.data-form-wide { grid-column: 1 / -1; }
+.record-list { display: grid; gap: .5rem; margin-top: 1rem; }
+.record-list > div { display: flex; justify-content: space-between; gap: 1rem; border-radius: .7rem; background: #f2f5f2; padding: .65rem .8rem; font-size: .8rem; }
+.record-list span { color: var(--muted); }
 .file-button { display: inline-flex; border: 1px solid #6eae8b; border-radius: .85rem; background: #dcefe4; padding: .65rem .82rem; color: #174a39; cursor: pointer; box-shadow: 0 8px 20px rgba(31,91,70,.09), inset 0 1px 0 rgba(255,255,255,.82); transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
 .file-button:hover { transform: translateY(-1px); border-color: var(--forest); background: #cce8d7; box-shadow: 0 11px 23px rgba(30,79,59,.14), inset 0 1px 0 white; }
 .file-button input { display: none; }
@@ -525,8 +536,9 @@ pre { max-height: 380px; overflow: auto; border-radius: .65rem; background: var(
   .app-sidebar { position: fixed; z-index: 30; top: auto; right: 0; bottom: 0; left: 0; display: flex; width: 100%; height: 62px; flex-direction: row; align-items: center; justify-content: center; padding: .45rem; }
   .app-sidebar > .brand, .app-sidebar .side-label, .sidebar-account { display: none; }
   .side-navigation { display: flex; gap: .5rem; }
-  .side-item { display: none; }
-  .side-item.active { display: flex; min-width: 130px; padding: .65rem 1rem; font-size: .7rem; }
+  .side-navigation button.side-item { display: flex; width: auto; min-width: 120px; padding: .65rem 1rem; font-size: .7rem; }
+  .data-form { grid-template-columns: 1fr; }
+  .record-list > div { flex-direction: column; gap: .25rem; }
   .app-surface { padding-bottom: 62px; }
   .workspace { padding-right: .8rem; padding-left: .8rem; }
   .case-header, .section-heading { align-items: flex-start; flex-direction: column; }

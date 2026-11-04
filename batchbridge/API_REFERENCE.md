@@ -54,6 +54,8 @@ Browser clients must send cookies on authenticated requests.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
+| `GET` | `/api/v1/organizations` | List manufacturer and retailer organizations |
+| `POST` | `/api/v1/organizations` | Create a manufacturer or retailer with its first role-scoped staff login |
 | `GET` | `/api/v1/imports/templates/{kind}` | Download a batch or shipment CSV template |
 | `POST` | `/api/v1/imports/batches` | Validate and import batch records |
 | `POST` | `/api/v1/imports/shipments` | Validate and import shipment records |
@@ -66,6 +68,11 @@ Browser clients must send cookies on authenticated requests.
 | `POST` | `/api/v1/escalations/cases/{case_id}` | Retrieve an existing escalation; creation requires case proposal approval |
 
 Manufacturer escalation requires an approved traceability proposal, completed findings from every assigned retailer, and importer approval of the escalation-agent packet.
+
+Organization creation accepts `code`, `name`, `type` (`retailer` or `manufacturer`),
+`staff_name`, `staff_email`, and `staff_password` (at least 12 characters). Codes are stored
+uppercase. The password is hashed and never returned. Duplicate codes or emails are rejected.
+Create organizations before importing CSVs that refer to their codes.
 
 For photo reports (`source=customer_photo`), triage starts after officer verification and forwarding.
 The photo endpoint accepts multipart fields `retailer_code`, `description`, optional `reporter_name`,

@@ -1,4 +1,4 @@
-import type { CaseDetail, CaseSummary, DemoBarcodeMatch, Escalation, Inspection, User } from "./types";
+import type { BatchRecord, CaseDetail, CaseSummary, DemoBarcodeMatch, Escalation, Inspection, Organization, ProductRecord, ShipmentRecord, User } from "./types";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
@@ -32,6 +32,14 @@ export const api = {
       "/api/v1/reports/photo", { method: "POST", body: payload },
     ),
   retailers: () => request<{ code: string; name: string }[]>("/api/v1/catalog/retailers"),
+  organizations: () => request<Organization[]>("/api/v1/organizations"),
+  products: () => request<ProductRecord[]>("/api/v1/catalog/products"),
+  officerReport: (payload: { product_name: string; batch_number: string; description: string; purchase_date?: string }) =>
+    request<CaseSummary>("/api/v1/cases/officer-report", { method: "POST", body: JSON.stringify(payload) }),
+  createOrganization: (payload: { code: string; name: string; type: "retailer" | "manufacturer"; staff_name: string; staff_email: string; staff_password: string }) =>
+    request<Organization>("/api/v1/organizations", { method: "POST", body: JSON.stringify(payload) }),
+  batches: () => request<BatchRecord[]>("/api/v1/catalog/batches"),
+  shipments: () => request<ShipmentRecord[]>("/api/v1/catalog/shipments"),
   lookupBarcode: (caseId: string, barcode: string) =>
     request<DemoBarcodeMatch>(`/api/v1/cases/${caseId}/demo-barcode`, {
       method: "POST", body: JSON.stringify({ barcode }),

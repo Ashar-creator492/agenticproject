@@ -16,6 +16,7 @@
 - [x] Add Alembic migration support for PostgreSQL and SQLite.
 - [x] Seed fictional organizations, accounts, products, lots, and distribution records.
 - [x] Add batch and shipment CSV templates and validated imports.
+- [x] Add importer-managed manufacturer/retailer setup, first staff logins, and clean-database importer bootstrap.
 
 ## Phase 2: identity and safety controls
 
@@ -74,6 +75,8 @@
 - [x] Build staff login and role-specific navigation.
 - [x] Build importer case detail, agent trace, approvals, and timeline.
 - [x] Build importer CSV import screens.
+- [x] Make organization setup and imports accessible before any case exists; show imported records and row errors.
+- [x] Expose retailer-originated report creation in the frontend for imported products and lots.
 - [x] Build retailer complaint review, assigned inspection, and finding screens.
 - [x] Build manufacturer escalation inbox and response screen.
 - [x] Add loading, error, and empty states.

@@ -17,6 +17,7 @@ from app.api import (
     health,
     imports,
     inspections,
+    organizations,
     reports,
 )
 from app.config import get_settings
@@ -71,6 +72,7 @@ app.include_router(evidence.router, prefix="/api/v1")
 app.include_router(imports.router, prefix="/api/v1")
 app.include_router(cases.router, prefix="/api/v1")
 app.include_router(inspections.router, prefix="/api/v1")
+app.include_router(organizations.router, prefix="/api/v1")
 app.include_router(escalations.router, prefix="/api/v1")
 
 frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"

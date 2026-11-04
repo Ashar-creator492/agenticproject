@@ -3,6 +3,22 @@
 Updated: 2026-10-17. This describes completed code and local verification, not a claim of
 production deployment. Stable operating context is in `CONTEXT.md`.
 
+## Own-data setup update (2026-11-04)
+
+- A fresh database can run with `SEED_DEMO_DATA=false`; `python -m app.bootstrap_importer`
+  prompts for the first importer organization and account after migrations.
+- Importers can create a manufacturer or retailer with an initial, role-scoped staff account.
+  The Data setup screen is available even when no cases exist, shows organizations and imported
+  records, and provides batch/shipment CSV templates and row errors.
+- Retailer staff can file a new suspected-issue report from the UI using an imported product and
+  manufacturer lot. This gives own-data records a complete in-app investigation path without
+  relying on the demo barcode mapping.
+- Existing databases were not reset or altered for this change. The demo seed is unchanged for
+  complete demo fixtures and skips adding demo complaints to an incomplete custom catalogue.
+- Current verification: Ruff passed, 41 backend tests passed, and the TypeScript/Vite production
+  build passed. A new integration test runs imported records through triage, exact-lot tracing,
+  retailer finding, manufacturer response, and importer closure.
+
 ## 1. Why the workflow changed
 
 The initial implementation used Groq tool-calling for all three stages. Local testing exposed

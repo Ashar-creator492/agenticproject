@@ -21,6 +21,22 @@ class UserView(ApiModel):
     organization_id: str
 
 
+class OrganizationCreate(BaseModel):
+    code: str = Field(min_length=2, max_length=40, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
+    name: str = Field(min_length=2, max_length=200)
+    type: Literal["retailer", "manufacturer"]
+    staff_name: str = Field(min_length=2, max_length=120)
+    staff_email: EmailStr
+    staff_password: str = Field(min_length=12, max_length=200)
+
+
+class OrganizationView(ApiModel):
+    id: str
+    code: str
+    name: str
+    type: str
+
+
 class ReportCreate(BaseModel):
     reporter_name: str | None = Field(default=None, max_length=120)
     reporter_email: EmailStr | None = None

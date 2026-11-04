@@ -6,12 +6,16 @@ import { createDemoPhoto } from "./demoPhoto";
 import { HowItWorks } from "./HowItWorks";
 import type {
   AgentRun,
+  BatchRecord,
   CaseDetail,
   CaseSummary,
   DemoBarcodeMatch,
   Escalation,
   Inspection,
+  Organization,
+  ProductRecord,
   Proposal,
+  ShipmentRecord,
   User,
 } from "./types";
 
@@ -547,8 +551,9 @@ function RetailerActions({ detail, inspections, onDone }: { detail: CaseDetail; 
   return null;
 }
 
-function ImportPanel() {
+function ImportPanel({ onImported }: { onImported: () => Promise<void> }) {
   const [result, setResult] = useState("");
+  const [rowErrors, setRowErrors] = useState<Record<string, unknown>[]>([]);
   const [busy, setBusy] = useState(false);
   async function upload(kind: "batches" | "shipments", file?: File) {
     if (!file) return;
@@ -556,22 +561,119 @@ function ImportPanel() {
     try {
       const response = await api.importCsv(kind, file);
       setResult(`${label(kind)}: ${response.inserted} inserted, ${response.skipped} skipped, ${response.errors.length} errors.`);
+      setRowErrors(response.errors);
+      await onImported();
     } catch (reason) {
       setResult(reason instanceof Error ? reason.message : "Import failed");
+      setRowErrors([]);
     } finally {
       setBusy(false);
     }
   }
   return (
     <section className="panel compact-panel">
-      <div><span className="eyebrow">Batch and shipment records</span><h2>Update tracking records</h2></div>
+      <div><span className="eyebrow">Batch and shipment records</span><h2>Update tracking records</h2><p className="muted small">Import batches before shipments. Use codes from the organization list above.</p></div>
       <div className="import-grid">
         <label className="file-button">Batch CSV<input type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => void upload("batches", event.target.files?.[0])} /></label>
         <label className="file-button">Shipment CSV<input type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => void upload("shipments", event.target.files?.[0])} /></label>
+        <a href="/api/v1/imports/templates/batches">Batch template</a>
+        <a href="/api/v1/imports/templates/shipments">Shipment template</a>
       </div>
       {result && <p className="muted small">{result}</p>}
+      {rowErrors.length > 0 && <ul className="import-errors">{rowErrors.map((item, index) => <li key={index}>Row {String(item.row)}: {String(item.error)}</li>)}</ul>}
     </section>
   );
+}
+
+function DataSetup() {
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [batches, setBatches] = useState<BatchRecord[]>([]);
+  const [shipments, setShipments] = useState<ShipmentRecord[]>([]);
+  const [form, setForm] = useState({ code: "", name: "", type: "retailer" as "retailer" | "manufacturer", staff_name: "", staff_email: "", staff_password: "" });
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const refresh = useCallback(async () => {
+    const [nextOrganizations, nextBatches, nextShipments] = await Promise.all([api.organizations(), api.batches(), api.shipments()]);
+    setOrganizations(nextOrganizations);
+    setBatches(nextBatches);
+    setShipments(nextShipments);
+  }, []);
+  useEffect(() => { void refresh().catch((error) => setMessage(String(error))); }, [refresh]);
+
+  async function create(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    try {
+      await api.createOrganization(form);
+      setMessage(`Created ${form.name} and its ${form.type} staff account (${form.staff_email}).`);
+      setForm({ code: "", name: "", type: "retailer", staff_name: "", staff_email: "", staff_password: "" });
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not create organization");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <main className="workspace data-setup">
+    <header className="case-header"><div><span className="eyebrow">Importer records</span><h1>Data setup</h1><p>Add a manufacturer or retailer and its first staff login, then import batches followed by shipments.</p></div></header>
+    {message && <div className="alert" role="status">{message}</div>}
+    <section className="panel"><div className="section-heading"><div><span className="eyebrow">Organizations</span><h2>Add an organization</h2></div></div>
+      <form className="data-form" onSubmit={(event) => void create(event)}>
+        <label>Type<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as "retailer" | "manufacturer" })}><option value="retailer">Retailer</option><option value="manufacturer">Manufacturer</option></select></label>
+        <label>Code<input required minLength={2} maxLength={40} pattern="[A-Za-z0-9][A-Za-z0-9_-]*" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value.toUpperCase() })} placeholder="RETAILER-E" /></label>
+        <label>Organization name<input required minLength={2} maxLength={200} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+        <label>Staff name<input required minLength={2} maxLength={120} value={form.staff_name} onChange={(event) => setForm({ ...form, staff_name: event.target.value })} /></label>
+        <label>Staff email<input required type="email" value={form.staff_email} onChange={(event) => setForm({ ...form, staff_email: event.target.value })} /></label>
+        <label>Initial password<input required type="password" minLength={12} maxLength={200} autoComplete="new-password" value={form.staff_password} onChange={(event) => setForm({ ...form, staff_password: event.target.value })} /></label>
+        <button className="button button-primary" disabled={busy}>Create organization and login</button>
+      </form>
+      <p className="muted small">Share the initial password with the staff member privately. It is stored only as a hash.</p>
+      <div className="record-list">{organizations.map((item) => <div key={item.id}><strong>{item.name}</strong><span>{item.code} · {label(item.type)}</span></div>)}</div>
+    </section>
+    <ImportPanel onImported={refresh} />
+    <section className="panel"><span className="eyebrow">Current records</span><h2>Batches ({batches.length})</h2><div className="record-list">{batches.map((item) => <div key={item.id}><strong>{item.product_name} · Lot {item.batch_number}</strong><span>{item.sku} · {item.quantity_received} received</span></div>)}</div></section>
+    <section className="panel"><h2>Shipments ({shipments.length})</h2><div className="record-list">{shipments.map((item) => <div key={item.id}><strong>{item.shipment_reference} · {item.retailer_name}</strong><span>{item.sku} · Lot {item.batch_number} · {item.quantity} shipped</span></div>)}</div></section>
+  </main>;
+}
+
+function RetailerReportForm({ onCreated }: { onCreated: (created: CaseSummary) => void }) {
+  const [products, setProducts] = useState<ProductRecord[]>([]);
+  const [form, setForm] = useState({ product_name: "", batch_number: "", description: "", purchase_date: "" });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { void api.products().then(setProducts).catch((reason) => setError(String(reason))); }, []);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const created = await api.officerReport({
+        product_name: form.product_name,
+        batch_number: form.batch_number.trim(),
+        description: form.description.trim(),
+        ...(form.purchase_date ? { purchase_date: form.purchase_date } : {}),
+      });
+      onCreated(created);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not create report");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <main className="workspace data-setup"><header className="case-header"><div><span className="eyebrow">Retailer safety manager</span><h1>New inspection report</h1><p>Record a suspected issue for a product and manufacturer lot. This starts triage for importer review.</p></div></header>
+    {error && <div className="alert danger" role="alert">{error}</div>}
+    <section className="panel"><form className="data-form" onSubmit={(event) => void submit(event)}>
+      <label>Product<select required value={form.product_name} onChange={(event) => setForm({ ...form, product_name: event.target.value })}><option value="">Select a product</option>{products.map((item) => <option key={item.id} value={item.sku}>{item.name} ({item.sku})</option>)}</select></label>
+      <label>Manufacturer lot<input required maxLength={100} value={form.batch_number} onChange={(event) => setForm({ ...form, batch_number: event.target.value })} /></label>
+      <label>Purchase date (optional)<input type="date" value={form.purchase_date} onChange={(event) => setForm({ ...form, purchase_date: event.target.value })} /></label>
+      <label className="data-form-wide">Observed issue<textarea required minLength={10} maxLength={5000} rows={5} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+      <button className="button button-primary" disabled={busy || products.length === 0}>Submit suspected issue</button>
+    </form></section>
+  </main>;
 }
 
 function CaseWorkspace({ user, summary }: { user: User; summary: CaseSummary }) {
@@ -629,7 +731,6 @@ function CaseWorkspace({ user, summary }: { user: User; summary: CaseSummary }) 
         <div className="case-badges"><Pill value={detail.case.status} /><Pill value={detail.case.safety_verdict} /></div>
       </header>
       {error && <div className="alert danger">{error}</div>}
-      {user.role === "importer_investigator" && <ImportPanel />}
       {detail.demo_verification && <section className="panel verified-match">
         <span className="eyebrow">Human-verified product identity</span><h2>{detail.demo_verification.product_name}</h2>
         <p>Product {detail.demo_verification.sku} · Lot {detail.demo_verification.batch_number}</p>
@@ -698,6 +799,7 @@ function ManufacturerInbox() {
 function StaffApp({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [selected, setSelected] = useState<CaseSummary | null>(null);
+  const [view, setView] = useState<"cases" | "data" | "new-report">("cases");
   const nameStorageKey = `escalera.display-name.${user.id}`;
   const [displayName, setDisplayName] = useState(() => window.localStorage.getItem(nameStorageKey) || user.display_name);
   const [nameDraft, setNameDraft] = useState(displayName);
@@ -722,7 +824,9 @@ function StaffApp({ user, onLogout }: { user: User; onLogout: () => void }) {
         <Brand className="brand-inverse" />
         <nav className="side-navigation" aria-label="Workspace">
           <span className="side-label">Workspace</span>
-          <span className="side-item active"><span className="side-icon"><InvestigationIcon /></span>{user.role === "manufacturer_reviewer" ? "Escalations" : "Investigations"}<i>{user.role === "manufacturer_reviewer" ? "" : cases.length}</i></span>
+          <button type="button" className={`side-item ${view === "cases" ? "active" : ""}`} onClick={() => setView("cases")}><span className="side-icon"><InvestigationIcon /></span>{user.role === "manufacturer_reviewer" ? "Escalations" : "Investigations"}<i>{user.role === "manufacturer_reviewer" ? "" : cases.length}</i></button>
+          {user.role === "importer_investigator" && <button type="button" className={`side-item ${view === "data" ? "active" : ""}`} onClick={() => setView("data")}><span className="side-icon"><SettingsIcon /></span>Data setup</button>}
+          {user.role === "retailer_safety_manager" && <button type="button" className={`side-item ${view === "new-report" ? "active" : ""}`} onClick={() => setView("new-report")}><span className="side-icon"><InvestigationIcon /></span>New report</button>}
         </nav>
         <div className="sidebar-account">
           {settingsOpen && <form className="account-popover" id="account-settings" onSubmit={saveDisplayName}>
@@ -736,7 +840,7 @@ function StaffApp({ user, onLogout }: { user: User; onLogout: () => void }) {
       </aside>
       <div className="app-surface">
         <header className="app-bar"><div><span className="app-kicker">Operations console</span><strong>{user.role === "manufacturer_reviewer" ? "Manufacturer review" : "Food safety investigations"}</strong></div><div className="bar-actions"><span className="live-indicator"><i /> Live records</span></div></header>
-        {user.role === "manufacturer_reviewer" ? <ManufacturerInbox /> : (
+        {user.role === "importer_investigator" && view === "data" ? <DataSetup /> : user.role === "retailer_safety_manager" && view === "new-report" ? <RetailerReportForm onCreated={(created) => { setCases((items) => [created, ...items]); setSelected(created); setView("cases"); }} /> : user.role === "manufacturer_reviewer" ? <ManufacturerInbox /> : (
           <div className="dashboard-grid">
             <aside className="case-list"><div className="list-heading"><span className="eyebrow">Operational queue</span><h2>Cases</h2><span>{cases.length} active records</span></div>{cases.map((item) => <button className={`case-row ${selected?.id === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item)}><div><strong>{item.public_id}</strong><span>{item.reporter_name ?? item.product_name}</span></div><Pill value={item.status} /><small>{item.product_name} · Lot {item.batch_number ?? "unknown"}</small></button>)}</aside>
             <main>{selected ? <CaseWorkspace user={user} summary={selected} /> : <div className="empty-state">No cases are available for this organization.</div>}</main>

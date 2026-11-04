@@ -6,6 +6,11 @@ export type User = {
   organization_id: string;
 };
 
+export type Organization = { id: string; code: string; name: string; type: "retailer" | "manufacturer" };
+export type ProductRecord = { id: string; sku: string; name: string; manufacturer: { code: string; name: string } };
+export type BatchRecord = { id: string; sku: string; product_name: string; batch_number: string; quantity_received: number; expiry_date: string | null };
+export type ShipmentRecord = { id: string; shipment_reference: string; sku: string; batch_number: string; retailer_code: string; retailer_name: string; quantity: number; shipped_at: string };
+
 export type CaseSummary = {
   id: string;
   public_id: string;

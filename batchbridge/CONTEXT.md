@@ -41,6 +41,7 @@ This is frontend explanatory content only; backend permissions and workflow gate
   product identity, forwards customer complaints, creates officer reports, completes assigned checks.
 - Importer investigator: imports batch/shipment CSVs, runs investigations, reviews proposals,
   coordinates supermarket checks, approves manufacturer packets, records the final verdict.
+  The importer can create retailer/manufacturer organizations with an initial staff account.
 - Manufacturer reviewer: accesses packets addressed to its organization and submits a response.
 
 ## End-to-end workflow
@@ -63,6 +64,8 @@ This is frontend explanatory content only; backend permissions and workflow gate
     and closes the case. Public tracking reflects the final state.
 
 Legacy structured reports and officer-created reports start triage on creation.
+The retailer UI now exposes officer-created reports for imported products and lots; this is the
+own-data intake path while public photo verification remains a simulated barcode demo.
 No email/SMS or external manufacturer dispatch is implemented; communication uses portal queues.
 
 ## Safety and approval invariants
