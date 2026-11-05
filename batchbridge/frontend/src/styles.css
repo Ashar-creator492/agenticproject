@@ -281,6 +281,9 @@ textarea { resize: vertical; }
 .app-shell { position: relative; display: grid; min-height: 100vh; grid-template-columns: 224px minmax(0,1fr); background: radial-gradient(circle at 78% 12%, rgba(140,222,179,.2), transparent 30rem), radial-gradient(circle at 22% 92%, rgba(185,245,104,.1), transparent 24rem), var(--canvas); }
 .app-shell::before { position: fixed; z-index: 0; inset: 0; background-image: linear-gradient(rgba(31,91,70,.028) 1px, transparent 1px), linear-gradient(90deg, rgba(31,91,70,.028) 1px, transparent 1px); background-size: 56px 56px; content: ""; pointer-events: none; }
 .app-shell > * { position: relative; z-index: 1; }
+.app-shell.sidebar-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+.app-shell.sidebar-collapsed .app-sidebar { display: none; }
+.app-shell.sidebar-collapsed .app-surface { grid-column: 2; }
 .app-sidebar { position: sticky; z-index: 15; top: 0; display: flex; height: 100vh; flex-direction: column; border-right: 1px solid rgba(255,255,255,.72); background: linear-gradient(180deg, rgba(225,247,235,.78), rgba(214,240,225,.58)); padding: 1.3rem 1rem; color: var(--ink); box-shadow: 14px 0 44px rgba(29,70,53,.055), inset -1px 0 0 rgba(55,106,84,.08); backdrop-filter: blur(26px) saturate(125%); }
 .app-sidebar > .brand { padding: .2rem .55rem 1.8rem; }
 .app-sidebar .brand-inverse { color: var(--ink); }
@@ -315,7 +318,12 @@ textarea { resize: vertical; }
 .account-popover .button { min-height: 2.35rem; padding: .55rem .7rem; font-size: .68rem; }
 .app-surface { min-width: 0; }
 .app-bar { position: sticky; z-index: 10; top: 0; display: flex; height: 66px; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,.72); background: rgba(246,250,247,.68); padding: .7rem 1.3rem; box-shadow: 0 10px 30px rgba(25,58,45,.045); backdrop-filter: blur(24px) saturate(135%); }
-.app-bar > div:first-child { display: grid; gap: .08rem; }
+.app-bar-start { display: flex; gap: .75rem; align-items: center; min-width: 0; }
+.app-bar-title { display: grid; gap: .08rem; min-width: 0; }
+.sidebar-toggle { display: grid; width: 2.25rem; height: 2.25rem; flex: 0 0 auto; place-items: center; border: 1px solid var(--line); border-radius: .7rem; background: rgba(255,255,255,.8); color: var(--forest); }
+.sidebar-toggle:hover { border-color: var(--emerald); background: white; }
+.sidebar-toggle:focus-visible { outline: 3px solid rgba(47,143,104,.24); outline-offset: 2px; }
+.sidebar-toggle svg { width: 1.2rem; height: 1.2rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .app-bar strong { font-size: .85rem; letter-spacing: -.015em; }
 .app-kicker { color: var(--muted); font-size: .58rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
 .bar-actions { display: flex; gap: .8rem; align-items: center; }
@@ -540,6 +548,7 @@ pre { max-height: 380px; overflow: auto; border-radius: .65rem; background: var(
   .data-form { grid-template-columns: 1fr; }
   .record-list > div { flex-direction: column; gap: .25rem; }
   .app-surface { padding-bottom: 62px; }
+  .sidebar-collapsed .app-surface { padding-bottom: 0; }
   .workspace { padding-right: .8rem; padding-left: .8rem; }
   .case-header, .section-heading { align-items: flex-start; flex-direction: column; }
   .compact-panel { align-items: stretch; flex-direction: column; }

@@ -381,7 +381,7 @@ function AgentCard({ agent, run, gate }: { agent: keyof typeof stageMeta; run?: 
           {assessment?.unanswered_questions && assessment.unanswered_questions.length > 0 && <div className="small"><strong>Follow-up questions</strong><ul>{assessment.unanswered_questions.map((question, index) => <li key={index}>{question}</li>)}</ul></div>}
           <div className="metric-row">
             {confidence && <span><small>Confidence</small><strong>{label(confidence)}</strong></span>}
-            {recommendation && <span><small>Suggested next step</small><strong>{label(recommendation)}</strong></span>}
+            {recommendation && <span><small>{agent === "triage" && recommendation === "forward_to_importer" ? "Report assessment" : "Suggested next step"}</small><strong>{agent === "triage" && recommendation === "forward_to_importer" ? "Ready for batch tracing after approval" : label(recommendation)}</strong></span>}
           </div>
           {gate.blocked_reason && !["queued", "running"].includes(run.status) && <div className="stage-guidance" role="status"><strong>Before you continue</strong><span>{stakeholderText(gate.blocked_reason)}</span></div>}
           {run.error && <div className="alert danger"><strong>This step could not finish.</strong><span>Try again. Contact system support if the problem continues.</span></div>}
@@ -698,7 +698,10 @@ function CaseWorkspace({ user, summary }: { user: User; summary: CaseSummary }) 
 
   const latestRuns = useMemo(() => {
     const result: Partial<Record<AgentRun["agent_type"], AgentRun>> = {};
-    for (const run of detail?.agent_runs ?? []) result[run.agent_type] = run;
+    for (const run of detail?.agent_runs ?? []) {
+      if (run.agent_type === "escalation" && Boolean(detail?.manufacturer_response) && run.status === "awaiting_human") continue;
+      result[run.agent_type] = run;
+    }
     return result;
   }, [detail]);
 
@@ -712,17 +715,18 @@ function CaseWorkspace({ user, summary }: { user: User; summary: CaseSummary }) 
   }
 
   if (!detail) return <div className="empty-state">Loading case evidence…</div>;
-  const pending = detail.proposals.filter((proposal) => proposal.status === "pending" && Object.values(detail.workflow).some((step) => step.latest_proposal_id === proposal.id));
+  const packetSent = Boolean(detail.manufacturer_response) || detail.case.status === "manufacturer_review";
+  const pending = detail.proposals.filter((proposal) => proposal.status === "pending" && !(packetSent && proposal.type === "manufacturer_escalation_packet") && Object.values(detail.workflow).some((step) => step.latest_proposal_id === proposal.id));
   const agentRunning = Boolean(busy) || detail.agent_runs.some((run) => ["queued", "running"].includes(run.status));
   const completedStages = (Object.keys(stageMeta) as AgentRun["agent_type"][]).filter((stage) => latestRuns[stage]?.status === "completed").length;
-  const nextStage: AgentRun["agent_type"] | null = detail.workflow.escalation.can_run
+  const nextStage: AgentRun["agent_type"] | null = packetSent || pending.length ? null : detail.workflow.escalation.can_run
     ? "escalation"
     : detail.workflow.traceability.can_run
       ? "traceability"
       : detail.workflow.triage.can_run
         ? "triage"
         : null;
-  const availableOtherStages = (Object.keys(stageMeta) as AgentRun["agent_type"][]).filter((stage) => stage !== nextStage && detail.workflow[stage].can_run);
+  const availableOtherStages = (Object.keys(stageMeta) as AgentRun["agent_type"][]).filter((stage) => !packetSent && pending.length === 0 && stage !== nextStage && detail.workflow[stage].can_run);
 
   return (
     <div className="workspace">
@@ -748,7 +752,7 @@ function CaseWorkspace({ user, summary }: { user: User; summary: CaseSummary }) 
       <section>
         <div className="section-heading"><div><span className="eyebrow">Investigation progress</span><h2>Evidence checks</h2><p className="section-description">Complete each check in order. Every operational decision still requires human approval.</p></div><button className="button button-ghost" onClick={() => void refresh()}>Refresh status</button></div>
         <div className="progress-summary" aria-label={`${completedStages} of 3 evidence checks complete`}>
-          <div><strong>{completedStages} of 3 complete</strong><span>{agentRunning ? "Checking evidence now" : nextStage ? `${stageMeta[nextStage].title} is ready` : pending.length ? "Waiting for your approval" : "Review requirements below"}</span></div>
+          <div><strong>{completedStages} of 3 complete</strong><span>{agentRunning ? "Checking evidence now" : detail.manufacturer_response ? "Manufacturer responded; record the final verdict" : packetSent ? "Waiting for manufacturer response" : nextStage ? `${stageMeta[nextStage].title} is ready` : pending.length ? "Waiting for your approval" : "Review requirements below"}</span></div>
           <div className="progress-track"><i style={{ width: `${(completedStages / 3) * 100}%` }} /></div>
         </div>
         <div className="agent-grid">
@@ -785,13 +789,24 @@ function ManufacturerInbox() {
   const [items, setItems] = useState<Escalation[]>([]);
   const [selected, setSelected] = useState<Escalation | null>(null);
   const [response, setResponse] = useState("");
+  const [error, setError] = useState("");
   const refresh = useCallback(async () => { const next = await api.escalations(); setItems(next); setSelected((current) => next.find((item) => item.id === current?.id) ?? next[0] ?? null); }, []);
-  useEffect(() => { void refresh(); }, [refresh]);
-  async function submit() { if (!selected || !response.trim()) return; await api.respond(selected.id, response); setResponse(""); await refresh(); }
+  useEffect(() => { void refresh().catch((reason) => setError(reason instanceof Error ? reason.message : "Could not load escalations")); }, [refresh]);
+  async function submit() {
+    if (!selected || response.trim().length < 3) return;
+    setError("");
+    try {
+      await api.respond(selected.id, response.trim());
+      setResponse("");
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not submit response");
+    }
+  }
   return (
     <div className="manufacturer-grid">
       <aside className="case-list"><div className="list-heading"><span className="eyebrow">Manufacturer</span><h2>Escalations</h2></div>{items.map((item) => <button className={`case-row ${selected?.id === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item)}><strong>{String(item.packet.case_public_id)}</strong><span>{String((item.packet.product as Record<string, unknown>)?.name ?? "Product")}</span><Pill value={item.status} /></button>)}</aside>
-      <main className="workspace">{selected ? <><header className="case-header"><div><span className="eyebrow">Evidence packet</span><h1>{String(selected.packet.case_public_id)}</h1><p>Review the verified trace and retailer findings before responding.</p></div><Pill value={selected.status} /></header><section className="panel"><ManufacturerReport packet={selected.packet} downloadUrl={api.manufacturerReportUrl(selected.id)} /></section>{selected.status !== "responded" && <section className="panel approval-panel"><h2>Manufacturer response</h2><label>Investigation result<textarea rows={5} value={response} onChange={(event) => setResponse(event.target.value)} /></label><button className="button button-primary" onClick={() => void submit()}>Submit human response</button></section>}</> : <div className="empty-state">No manufacturer escalations yet.</div>}</main>
+      <main className="workspace">{selected ? <><header className="case-header"><div><span className="eyebrow">Evidence packet</span><h1>{String(selected.packet.case_public_id)}</h1><p>Review the verified trace and retailer findings before responding.</p></div><Pill value={selected.status} /></header><section className="panel"><ManufacturerReport packet={selected.packet} downloadUrl={api.manufacturerReportUrl(selected.id)} /></section>{selected.status !== "responded" && <section className="panel approval-panel"><h2>Manufacturer response</h2><label>Investigation result<textarea rows={5} minLength={3} value={response} onChange={(event) => setResponse(event.target.value)} /></label><p className="muted small">Enter at least 3 characters.</p>{error && <div className="alert danger" role="alert">{error}</div>}<button className="button button-primary" disabled={response.trim().length < 3} onClick={() => void submit()}>Submit human response</button></section>}</> : <div className="empty-state">No manufacturer escalations yet.</div>}</main>
     </div>
   );
 }
@@ -804,6 +819,8 @@ function StaffApp({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [displayName, setDisplayName] = useState(() => window.localStorage.getItem(nameStorageKey) || user.display_name);
   const [nameDraft, setNameDraft] = useState(displayName);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.localStorage.getItem("escalera.sidebar-open") !== "false");
+  useEffect(() => { window.localStorage.setItem("escalera.sidebar-open", String(sidebarOpen)); }, [sidebarOpen]);
   useEffect(() => {
     if (user.role === "manufacturer_reviewer") return;
     void api.cases().then((items) => { setCases(items); setSelected(items[0] ?? null); });
@@ -819,8 +836,8 @@ function StaffApp({ user, onLogout }: { user: User; onLogout: () => void }) {
   }
 
   return (
-    <div className="app-shell">
-      <aside className="app-sidebar">
+    <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
+      <aside className="app-sidebar" id="workspace-sidebar" aria-hidden={!sidebarOpen} inert={!sidebarOpen}>
         <Brand className="brand-inverse" />
         <nav className="side-navigation" aria-label="Workspace">
           <span className="side-label">Workspace</span>
@@ -839,7 +856,7 @@ function StaffApp({ user, onLogout }: { user: User; onLogout: () => void }) {
         </div>
       </aside>
       <div className="app-surface">
-        <header className="app-bar"><div><span className="app-kicker">Operations console</span><strong>{user.role === "manufacturer_reviewer" ? "Manufacturer review" : "Food safety investigations"}</strong></div><div className="bar-actions"><span className="live-indicator"><i /> Live records</span></div></header>
+        <header className="app-bar"><div className="app-bar-start"><button type="button" className="sidebar-toggle" aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"} aria-controls="workspace-sidebar" aria-expanded={sidebarOpen} onClick={() => { setSidebarOpen((open) => !open); setSettingsOpen(false); }}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /><path d={sidebarOpen ? "m15 9 3 3-3 3" : "m17 9-3 3 3 3"} /></svg></button><div className="app-bar-title"><span className="app-kicker">Operations console</span><strong>{user.role === "manufacturer_reviewer" ? "Manufacturer review" : "Food safety investigations"}</strong></div></div><div className="bar-actions"><span className="live-indicator"><i /> Live records</span></div></header>
         {user.role === "importer_investigator" && view === "data" ? <DataSetup /> : user.role === "retailer_safety_manager" && view === "new-report" ? <RetailerReportForm onCreated={(created) => { setCases((items) => [created, ...items]); setSelected(created); setView("cases"); }} /> : user.role === "manufacturer_reviewer" ? <ManufacturerInbox /> : (
           <div className="dashboard-grid">
             <aside className="case-list"><div className="list-heading"><span className="eyebrow">Operational queue</span><h2>Cases</h2><span>{cases.length} active records</span></div>{cases.map((item) => <button className={`case-row ${selected?.id === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item)}><div><strong>{item.public_id}</strong><span>{item.reporter_name ?? item.product_name}</span></div><Pill value={item.status} /><small>{item.product_name} · Lot {item.batch_number ?? "unknown"}</small></button>)}</aside>

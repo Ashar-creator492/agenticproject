@@ -8,6 +8,7 @@ from app.models import (
     AuditEvent,
     Batch,
     Case,
+    Escalation,
     Inspection,
     Proposal,
     RetailerReview,
@@ -106,6 +107,10 @@ def shipment_plan_current(db: Session, case: Case, proposal: Proposal) -> bool:
 def stage_block_reason(db: Session, case: Case, stage: str) -> str | None:
     if case.status == "closed":
         return "This case is closed."
+    if stage == "escalation" and db.scalar(
+        select(Escalation.id).where(Escalation.case_id == case.id)
+    ):
+        return "Manufacturer packet already sent. Record the final verdict after a response."
     other_running = db.scalar(
         select(AgentRun).where(
             AgentRun.case_id == case.id,

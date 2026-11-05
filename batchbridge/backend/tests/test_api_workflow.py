@@ -205,6 +205,7 @@ def test_complete_human_approved_batch_investigation(client, login_user):
         },
     )
     assert escalation_approval.status_code == 200, escalation_approval.text
+    assert client.post(f"/api/v1/cases/{case['id']}/escalation-analysis").status_code == 409
 
     _logout(client)
     login_user(client, "manufacturer@escalera.demo")
